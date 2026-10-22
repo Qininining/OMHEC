@@ -1,0 +1,39 @@
+# Personal environments and IDE settings
+.vscode/
+.idea/
+.venv/
+__pycache__/
+*.pro.user
+*.pro.user.*
+.DS_Store
+Thumbs.db
+
+# Builds and application-generated files
+build/
+build-*/
+cpp_build/
+/C++/OnlineMHEC/debug/
+/C++/OnlineMHEC/release/
+/C++/OnlineMHEC/data/
+/C++/OnlineMHEC/logs/
+/C++/OnlineMHEC/*.csv
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.exe
+*.log
+
+# Regenerable MATLAB results; raw Physical_Experiments/data stays tracked
+/MATLAB/Simulation/output/
+/MATLAB/Physical_Experiments/output/
+*.asv
+
+# LaTeX auxiliary files
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.out
+*.synctex.gz
