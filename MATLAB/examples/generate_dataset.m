@@ -1,7 +1,7 @@
 function data = generate_dataset(cfg, seed, rotationDeg, translationMagnitude)
 %GENERATE_DATASET Example-only ground truth, excitation and noisy observations.
 if nargin<1
-    cfg = omhec.default_config();
+    cfg = mhec.default_config();
     cfg.numSteps=100; cfg.rotationStep=deg2rad(1); cfg.translationStep=0.10;
     cfg.sigmaXY=0.003; cfg.nominalKappa=10;
 end
@@ -11,7 +11,7 @@ if nargin<4, translationMagnitude=1; end
 data.truth=makeTruth();
 rng(seed,'twister');
 data.initial=perturbTransform(data.truth.Tcs,rotationDeg,translationMagnitude);
-[data.poses,data.twists]=makeExcitation(cfg,data.truth.initialStagePose,omhec.inverseTransform(data.initial));
+[data.poses,data.twists]=makeExcitation(cfg,data.truth.initialStagePose,mhec.inverseTransform(data.initial));
 points=makeTruePoints(data.truth,data.poses);
 rng(seed+1000003,'twister');
 data.points=addObservationNoise(cfg,points,cfg.nominalKappa,1);
@@ -23,7 +23,7 @@ function truth = makeTruth()
 a=deg2rad(20); b=deg2rad(-180);
 Rsc=[cos(a) -sin(a) 0;sin(a) cos(a) 0;0 0 1]*[1 0 0;0 cos(b) -sin(b);0 sin(b) cos(b)];
 truth.Tsc = [Rsc, [12; 3; 5]; 0, 0, 0, 1];
-truth.Tcs = omhec.inverseTransform(truth.Tsc);
+truth.Tcs = mhec.inverseTransform(truth.Tsc);
 truth.toolOffset = [-0.5; 0.0; 0.5];
 truth.initialStagePose = eye(4);
 truth.initialStagePose(1:3, 4) = [1; 1; 1];
@@ -80,8 +80,8 @@ for k = 1:cfg.numSteps
         omega = cfg.rotationStep * rotationDirections(rotationIndex, :)';
     end
     cameraTwist = [omega; velocity];
-    twists(:, k) = omhec.adjointSE3(TscEstimate) * cameraTwist;
-    poses(:, :, k + 1) = omhec.expSE3(twists(:, k)) * poses(:, :, k);
+    twists(:, k) = mhec.adjointSE3(TscEstimate) * cameraTwist;
+    poses(:, :, k + 1) = mhec.expSE3(twists(:, k)) * poses(:, :, k);
 end
 end
 
@@ -103,7 +103,7 @@ axis = randn(3, 1);
 axis = axis / norm(axis);
 direction = randn(3, 1);
 direction = direction / norm(direction);
-rotationPerturbation = omhec.expSE3([axis * deg2rad(rotationDeg); zeros(3, 1)]);
+rotationPerturbation = mhec.expSE3([axis * deg2rad(rotationDeg); zeros(3, 1)]);
 estimate = truth;
 estimate(1:3, 1:3) = rotationPerturbation(1:3, 1:3) * truth(1:3, 1:3);
 estimate(1:3, 4) = truth(1:3, 4) + direction * translationMagnitude;

@@ -65,7 +65,7 @@ INCLUDEPATH += \
 
 # Hardware SDKs and Eigen are kept beside the project, as in the DMH examples.
 # The supplied OpenCV and pylon import libraries require Windows x64 / MSVC.
-!win32:error("OnlineMHEC requires Windows x64 and the device SDKs.")
+!win32:error("MHEC requires Windows x64 and the device SDKs.")
 win32:!msvc:error("Use a Qt MSVC x64 kit; the supplied SDK libraries are not MinGW libraries.")
 msvc:QMAKE_CXXFLAGS += /utf-8
 

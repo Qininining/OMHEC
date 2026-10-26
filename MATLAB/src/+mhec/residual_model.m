@@ -1,7 +1,7 @@
 function [residual, J, residualCovariance] = residual_model(Tcs, stageTwist, pPrevious, pCurrent, pointCovariance)
 %RESIDUAL_MODEL Position residual and analytical correction Jacobian.
-    commandedCameraTwist = omhec.adjointSE3(Tcs) * stageTwist;
-    commandedCameraMotion = omhec.expSE3(commandedCameraTwist);
+    commandedCameraTwist = mhec.adjointSE3(Tcs) * stageTwist;
+    commandedCameraMotion = mhec.expSE3(commandedCameraTwist);
     commandedRotation = commandedCameraMotion(1:3, 1:3);
     predicted = commandedCameraMotion(1:3, 1:3) * pPrevious + commandedCameraMotion(1:3, 4);
     residual = pCurrent - predicted;
@@ -12,7 +12,7 @@ function [residual, J, residualCovariance] = residual_model(Tcs, stageTwist, pPr
         commandedRotation * pointCovariance * commandedRotation';
     omega = commandedCameraTwist(1:3);
     velocity = commandedCameraTwist(4:6);
-    J = [omhec.skew(pPrevious) * omhec.skew(omega) - omhec.skew(velocity), ...
-        -omhec.skew(omega)];
+    J = [mhec.skew(pPrevious) * mhec.skew(omega) - mhec.skew(velocity), ...
+        -mhec.skew(omega)];
 
 end

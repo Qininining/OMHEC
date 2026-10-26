@@ -1,6 +1,6 @@
 # Core extraction validation
 
-Validation date: 2026-10-26. Sources were tested from a separate standalone copy outside the OMHEC working tree. No device was connected and no hardware application was launched.
+Validation date: 2026-10-26. Sources were tested from a separate standalone copy outside the MHEC working tree. No device was connected and no hardware application was launched.
 
 ## Environments
 
@@ -27,9 +27,13 @@ Before extracting algorithms, copies of the original MATLAB and C++ implementati
 
 ## Optional workflows
 
-- The migrated qmake hardware project successfully compiled/linked against the shared C++ core sources. AgeCOM.dll and PI_GCS2_DLL_x64.dll were deployed beside OnlineMHEC.exe.
+- The migrated qmake hardware project successfully compiled/linked against the shared C++ core sources. AgeCOM.dll and PI_GCS2_DLL_x64.dll were deployed beside MHEC.exe.
 - The independent paper simulation appendix completed run_simulation(true), including joint sensitivity and all four PDF outputs, using the shared MATLAB core.
 - Offline physical analysis completed for all 159 recorded input CSVs. All 11 output CSV statistics files and the LaTeX table matched a fresh execution of the pre-migration analysis exactly.
 - Original raw experiment data, manuscript PDF and setup image are preserved unchanged.
 
 The full 100-trial manuscript Monte Carlo run was not repeated for this refactor. Live hardware behavior and vendor runtime deployment remain untested. Compilation may retain pre-existing unused-variable/unused-parameter warnings in the hardware and compatibility code.
+
+## Naming update
+
+Public package/namespace/target names are now `mhec`; the optional microscope project is `MHEC.pro`. Example and appendix directories are `examples/microscope_demo` and `paper_experiments`. MATLAB core regression and the simple example were rerun after the rename.

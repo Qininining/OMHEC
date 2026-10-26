@@ -1,4 +1,4 @@
-#include <omhec/calibration.hpp>
+#include <mhec/calibration.hpp>
 #include <stdexcept>
 #include <cmath>
 
@@ -22,7 +22,7 @@ void covariance(const cv::Mat& p,int n,bool definite) {
     if(eigenvalues.at<double>(n-1)<(definite?1e-15:-1e-12))
         throw std::invalid_argument("Invalid covariance eigenvalues");
 }
-void append(omhec::State& s,const cv::Mat& xi,const cv::Vec3d& a,const cv::Vec3d& b) {
+void append(mhec::State& s,const cv::Mat& xi,const cv::Vec3d& a,const cv::Vec3d& b) {
     matrix(xi,6,1);
     for(int i=0;i<3;++i) if(!std::isfinite(a[i]) || !std::isfinite(b[i]))
         throw std::invalid_argument("Expected finite camera points");
@@ -32,7 +32,7 @@ void append(omhec::State& s,const cv::Mat& xi,const cv::Vec3d& a,const cv::Vec3d
     s.initialized=s.observations.all.P_c_curr_list.size()>=static_cast<size_t>(s.config.initialization_motions);
 }
 }
-namespace omhec {
+namespace mhec {
 State initialize(const cv::Mat& t,const cv::Mat& p,const cv::Mat& q,const cv::Mat& r,const Config& config) {
     transform(t); covariance(p,6,false); covariance(q,6,false); covariance(r,3,true);
     if(config.initialization_motions<1 || config.dt<=0 || config.decay_gain<0 ||

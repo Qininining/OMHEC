@@ -2,7 +2,7 @@ function T = expSE3(xi)
 omega = xi(1:3);
 velocity = xi(4:6);
 theta = norm(omega);
-Omega = omhec.skew(omega);
+Omega = mhec.skew(omega);
 if theta < 1e-10
     R = eye(3) + Omega;
     V = eye(3) + 0.5 * Omega;

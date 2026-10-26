@@ -9,10 +9,10 @@ assert(isequal(size(pPrevious),[3 1]) && isequal(size(pCurrent),[3 1]) && ...
     all(isfinite([pPrevious;pCurrent])), 'Expected finite 3x1 points');
 state.count = state.count + 1;
 useFilter = strcmp(method, 'iekf');
-    [residual, J, residualCovariance] = omhec.residual_model( ...
+    [residual, J, residualCovariance] = mhec.residual_model( ...
         state.Tcs, stageTwist, pPrevious, pCurrent, state.pointCovariance);
-    commandedCameraTwist = omhec.adjointSE3(state.Tcs) * stageTwist;
-    commandedCameraMotion = omhec.expSE3(commandedCameraTwist);
+    commandedCameraTwist = mhec.adjointSE3(state.Tcs) * stageTwist;
+    commandedCameraMotion = mhec.expSE3(commandedCameraTwist);
     commandedRotation = commandedCameraMotion(1:3, 1:3);
     if state.count <= state.cfg.observabilityInitializationSteps
         state.initializationJ = [state.initializationJ; J]; %#ok<AGROW>
@@ -87,7 +87,7 @@ useFilter = strcmp(method, 'iekf');
             delta = -virtualVelocity;
         else
             normalizedVelocity = -state.cfg.decayGain * ...
-                omhec.truncatedSvdPseudoinverse(J * decayStateScale, ...
+                mhec.truncatedSvdPseudoinverse(J * decayStateScale, ...
                     state.cfg.jfgdSvdRelativeThreshold) * residual;
             virtualVelocity = decayStateScale * normalizedVelocity;
             delta = -virtualVelocity;
@@ -95,7 +95,7 @@ useFilter = strcmp(method, 'iekf');
     end
 
     if all(isfinite(delta))
-        state.Tcs = omhec.expSE3(delta) * state.Tcs;
+        state.Tcs = mhec.expSE3(delta) * state.Tcs;
     end
 info.residual = residual;
 info.jacobian = J;

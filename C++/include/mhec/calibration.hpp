@@ -1,8 +1,8 @@
 #pragma once
-#include <omhec/legacy.hpp>
-#include <omhec/math.hpp>
+#include <mhec/legacy.hpp>
+#include <mhec/math.hpp>
 
-namespace omhec {
+namespace mhec {
 using Config = MHEC::CalibrationCfg;
 struct State {
     // Tsc maps camera coordinates to stage/base coordinates.

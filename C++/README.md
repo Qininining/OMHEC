@@ -1,43 +1,21 @@
-# C++ core
+# C++ interfaces
 
-`src/` contains the three estimators and shared math. `include/omhec/calibration.hpp` is the main API; `legacy.hpp` provides compatibility types for the original hardware application. Core files contain no Qt, GUI, device SDK, random-data generation or file output.
-
-## Build
-
-Use the CMake commands in the root README. Set `OMHEC_BUILD_EXAMPLES=OFF` or `BUILD_TESTING=OFF` to build only the library. Hardware is never built by this CMake project.
-
-On Windows, use MSVC x64 and install the OpenCV 4.10.0 runtime DLL matching the supplied import libraries. On other platforms set `OpenCV_DIR` to an installed OpenCV package. The core links only OpenCV and uses bundled Eigen headers. No Qt runtime is needed by the console example or tests.
-
-## Minimal recursive call
+Include `<mhec/calibration.hpp>` and link the CMake target `mhec`.
 
 ```cpp
-#include <omhec/calibration.hpp>
-
-omhec::Config cfg;
-auto state = omhec::initialize(Tsc0, P0, Q, R, cfg);
-omhec::update_iekf(state, cameraTwist, pPrevious, pCurrent);
-// Or: omhec::update_fgd(otherState, cameraTwist, pPrevious, pCurrent, lengthScale);
-cv::Mat Tsc = state.Tsc;
-cv::Mat P = state.filter.all.KF.P;
+mhec::Config cfg;
+auto state = mhec::initialize(Tsc0, P0, Q, R, cfg);
+mhec::update_iekf(state, cameraTwist, pPrevious, pCurrent);
+// PR-FGD: mhec::update_fgd(state, cameraTwist, pPrevious, pCurrent, lengthScale);
+// PO-LS:  mhec::solve_position_only_ls(toolToStagePoses, cameraPoints);
 ```
 
-All matrices are finite, double-precision `CV_64F`: `Tsc0` is 4x4, P0/Q are 6x6 and R is 3x3. R must be positive definite. Position arguments are `cv::Vec3d`. `cameraTwist` is 6x1, ordered [omega; v], in the camera frame. It is a motion increment, not a raw velocity. For a stage-frame increment:
+- Matrices use `CV_64F`: Tsc is 4x4, P0/Q are 6x6, R is 3x3, and cameraTwist is 6x1. Positions are `cv::Vec3d`.
+- Tsc maps camera to stage. Covariance describes the left correction of Tcs = inverse(Tsc).
+- Twists are camera-frame increments ordered [rotation; translation], in radians and one consistent length unit. Convert a stage increment using `Adjoint(Tcs)`; see the simulation example.
+- Six observations are collected before the first correction by default. Estimated covariance is `state.filter.all.KF.P`.
+- R is residual covariance by default. Point-covariance propagation and innovation gating retain the original configurable behavior; point propagation includes the original one-unit covariance floor.
 
-```cpp
-cv::Mat cameraTwist = cvMatFromEigen(
-    Adjoint(eigenFromCvMat(state.Tsc.inv())) * eigenFromCvMat(stageTwist));
-```
+Use MSVC x64 with the supplied Windows OpenCV libraries and matching OpenCV 4.10 runtime on PATH. Elsewhere, provide an installed OpenCV via `OpenCV_DIR`. Eigen headers are bundled. The core requires no Qt or device SDK.
 
-Tsc maps camera to stage; covariance describes the left correction of Tcs (its inverse). Translation may use any consistent length unit. Supply the same unit to positions, transform translations, twist translations and covariance blocks. PR-FGD's positive `lengthScale` is the existing normalization scale. The original default initialization count is six; estimates remain unchanged during the preceding warmup calls.
-
-R describes residual covariance by default. `cfg.iekf_propagate_point_covariance=true` instead uses the original hardware point-covariance propagation, including its existing one-unit covariance floor. `cfg.innovation_gate_enabled` retains the original gate behavior. Choose units and covariance explicitly when using either setting.
-
-Batch PO-LS takes a vector of tool-to-stage poses and the matching camera positions:
-
-```cpp
-cv::Mat Tsc = omhec::solve_position_only_ls(stagePoses, cameraPoints);
-```
-
-It rejects insufficient, malformed or rank-deficient observations. The recursive facade also rejects malformed sizes and nonfinite inputs. State retains the observation history for initialization; use a fresh state for a new calibration sequence.
-
-`examples/simulation/main.cpp` shows the complete data flow and error calculation. `examples/hardware/` contains Qt acquisition/motion functionality and historical compatibility code, outside the core dependency boundary.
+CMake options: `MHEC_BUILD_EXAMPLES` and `BUILD_TESTING`. The [microscope demo](examples/microscope_demo/README.md) has its own qmake project.

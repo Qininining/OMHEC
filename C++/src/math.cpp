@@ -1,4 +1,4 @@
-#include <omhec/math.hpp>
+#include <mhec/math.hpp>
 
 MatrixXd Adjoint(Matrix4d T)
 {

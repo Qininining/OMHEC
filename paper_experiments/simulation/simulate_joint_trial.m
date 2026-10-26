@@ -1,123 +1,9 @@
-function generate_simulation_data(cfg, scope)
-%GENERATE_SIMULATION_DATA Run the Section IV Monte Carlo experiments.
-% The synthetic observations follow the position-displacement model used in
-% the paper. Within each trial, all methods share both the excitation
-% trajectory and the same noisy position observations.
-% Use scope='anisotropy' to rerun only that sweep from existing results.
-if nargin < 2
-    scope = 'all';
-end
-if strcmp(scope, 'joint')
-    generate_joint_sensitivity_data(cfg);
-    return;
-end
-resultFile = fullfile(cfg.dataDir, 'paper_simulation_results.mat');
-if strcmp(scope, 'anisotropy')
-    previous = load(resultFile);
-    assert(isfield(previous.noiseMagnitude,'statistic') && strcmp(previous.noiseMagnitude.statistic,'terminal_step'), ...
-        'Old window-mean data detected. Regenerate all standard experiments first.');
-    % Only the anisotropy levels may change when reusing other experiments.
-    fields = {'p0Policy','seed','numTrials','numConvergenceTrials','numSteps', ...
-        'finalWindow','decayGain','observabilityInitializationSteps', ...
-        'jfgdSvdRelativeThreshold','sigmaXY','nominalKappa', ...
-        'processRotationStd','processTranslationStd','initialRotationDeg', ...
-        'initialTranslation','rotationStep','translationStep', ...
-        'decayCharacteristicLength','rotationLevelsDeg', ...
-        'translationLevels','noiseScaleLevels'};
-    for index = 1:numel(fields)
-        name = fields{index};
-        assert(isfield(previous.cfg,name) && isequaln(cfg.(name), previous.cfg.(name)), ...
-            'Configuration changed: %s. Run all simulations instead.', name);
-    end
-    fprintf('Running anisotropic-noise sweep (%d trials per level)...\n', cfg.numTrials);
-    anisotropy = runSweep(cfg, previous.truth, cfg.kappaLevels, 'kappa');
-    save(resultFile, 'cfg', 'anisotropy', '-append');
-    writeSimulationSummary(cfg, previous.convergence, ...
-        previous.initialSensitivity, anisotropy, previous.noiseMagnitude);
-    return;
-end
-assert(ismember(scope, {'all','standard'}), 'Unknown simulation scope: %s', scope);
-
-fprintf(['Running paper-aligned simulation (%d convergence trials, ' ...
-    '%d sweep trials, %d steps)...\n'], ...
-    cfg.numConvergenceTrials, cfg.numTrials, cfg.numSteps);
-
+function histories = simulate_joint_trial(cfg, seed, rotationDeg, translationMagnitude)
+% Selected prior: fixed scales with left-error coordinate mapping.
+cfg.priorRotationDeg = rotationDeg;
+cfg.priorTranslation = translationMagnitude;
 truth = makeTruth();
-
-convergence.rotation = nan(cfg.numSteps + 1, cfg.numConvergenceTrials, 3);
-convergence.translation = nan(cfg.numSteps + 1, cfg.numConvergenceTrials, 3);
-for trial = 1:cfg.numConvergenceTrials
-    seed = cfg.seed + 1000 + trial;
-    histories = simulateTrial(cfg, truth, seed, cfg.initialRotationDeg, ...
-        cfg.initialTranslation, cfg.nominalKappa, 1);
-    for method = 1:3
-        convergence.rotation(:, trial, method) = histories(method).rotation;
-        convergence.translation(:, trial, method) = histories(method).translation;
-    end
-end
-
-fprintf('  Initial rotation-error sweep...\n');
-initialSensitivity.rotation = runSweep(cfg, truth, ...
-    cfg.rotationLevelsDeg, 'rotation');
-fprintf('  Initial translation-error sweep...\n');
-initialSensitivity.translation = runSweep(cfg, truth, ...
-    cfg.translationLevels, 'translation');
-fprintf('  Anisotropic-noise sweep...\n');
-anisotropy = runSweep(cfg, truth, cfg.kappaLevels, 'kappa');
-fprintf('  Observation-noise magnitude sweep...\n');
-noiseMagnitude = runSweep(cfg, truth, cfg.noiseScaleLevels, 'noiseScale');
-
-resultFile = fullfile(cfg.dataDir, 'paper_simulation_results.mat');
-save(resultFile, 'cfg', 'truth', 'convergence', 'initialSensitivity', ...
-    'anisotropy', 'noiseMagnitude', '-v7.3');
-writeSimulationSummary(cfg, convergence, initialSensitivity, ...
-    anisotropy, noiseMagnitude);
-if strcmp(scope,'all'), generate_joint_sensitivity_data(cfg); end
-fprintf('Simulation results saved to %s\n', resultFile);
-end
-
-function sweep = runSweep(cfg, truth, levels, sweepType)
-sweep.statistic = 'terminal_step';
-sweep.stepIndex = cfg.numSteps;
-sweep.rotation = nan(numel(levels), cfg.numTrials, 3);
-sweep.translation = nan(numel(levels), cfg.numTrials, 3);
-
-for levelIndex = 1:numel(levels)
-    fprintf('    %s = %g (%d/%d)\n', sweepType, levels(levelIndex), ...
-        levelIndex, numel(levels));
-    for trial = 1:cfg.numTrials
-        rotationDeg = cfg.initialRotationDeg;
-        translation = cfg.initialTranslation;
-        kappa = cfg.nominalKappa;
-        noiseScale = 1;
-        switch sweepType
-            case 'rotation'
-                rotationDeg = levels(levelIndex);
-            case 'translation'
-                translation = levels(levelIndex);
-            case 'kappa'
-                kappa = levels(levelIndex);
-            case 'noiseScale'
-                noiseScale = levels(levelIndex);
-            otherwise
-                error('Unknown sweep type: %s', sweepType);
-        end
-
-        % Common random numbers isolate the swept variable: a given trial
-        % keeps its excitation, perturbation directions, and standardized
-        % noise draws at every level.
-        seed = cfg.seed + sum(double(sweepType)) * 10000 + trial;
-        histories = simulateTrial(cfg, truth, seed, rotationDeg, ...
-            translation, kappa, noiseScale);
-        for method = 1:3
-            tail = cfg.numSteps + 1;
-            sweep.rotation(levelIndex, trial, method) = ...
-                mean(histories(method).rotation(tail), 'omitnan');
-            sweep.translation(levelIndex, trial, method) = ...
-                mean(histories(method).translation(tail), 'omitnan');
-        end
-    end
-end
+histories = simulateTrial(cfg, truth, seed, rotationDeg, translationMagnitude, cfg.nominalKappa, 1);
 end
 
 function histories = simulateTrial(cfg, truth, seed, rotationDeg, ...
@@ -129,7 +15,7 @@ rng(seed, 'twister');
 initialEstimate = perturbTransform(truth.Tcs, rotationDeg, ...
     translationMagnitude);
 [stagePoses, stageTwists] = makeExcitation(cfg, truth.initialStagePose, ...
-    omhec.inverseTransform(initialEstimate));
+    mhec.inverseTransform(initialEstimate));
 truePoints = makeTruePoints(truth, stagePoses);
 
 % Common random numbers give a paired comparison: the estimators receive
@@ -158,9 +44,9 @@ for k = 1:cfg.numSteps
     sampleIndices = 1:last;
     if k >= cfg.observabilityInitializationSteps
         try
-            Tsc = omhec.solve_position_only_ls(stagePoses(:, :, sampleIndices), ...
+            Tsc = mhec.solve_position_only_ls(stagePoses(:, :, sampleIndices), ...
                 observations(:, sampleIndices));
-            candidate = omhec.inverseTransform(Tsc);
+            candidate = mhec.inverseTransform(Tsc);
             if all(isfinite(candidate), 'all')
                 estimate = candidate;
             end
@@ -177,10 +63,10 @@ function history = runJacobianEstimator(cfg, truth, estimate, stageTwists, ...
     observations, kappa, noiseScale, useFilter)
 history = initializeHistory(cfg, truth.Tcs, estimate);
 measurementStd = noiseScale * [cfg.sigmaXY; cfg.sigmaXY; kappa * cfg.sigmaXY];
-state = omhec.initialize(estimate, cfg, diag(measurementStd.^2));
+state = mhec.initialize(estimate, cfg, diag(measurementStd.^2));
 if useFilter, method='iekf'; else, method='fgd'; end
 for k = 1:cfg.numSteps
-    state = omhec.update(state, stageTwists(:,k), observations(:,k), observations(:,k+1), method);
+    state = mhec.update(state, stageTwists(:,k), observations(:,k), observations(:,k+1), method);
     [history.rotation(k+1), history.translation(k+1)] = transformError(truth.Tcs, state.Tcs);
 end
 end
@@ -195,7 +81,7 @@ end
 function truth = makeTruth()
 Rsc = eul2rotm(deg2rad([20, 0, -180]), 'ZYX');
 truth.Tsc = [Rsc, [12; 3; 5]; 0, 0, 0, 1];
-truth.Tcs = omhec.inverseTransform(truth.Tsc);
+truth.Tcs = mhec.inverseTransform(truth.Tsc);
 truth.toolOffset = [-0.5; 0.0; 0.5];
 truth.initialStagePose = eye(4);
 truth.initialStagePose(1:3, 4) = [1; 1; 1];
@@ -252,8 +138,8 @@ for k = 1:cfg.numSteps
         omega = cfg.rotationStep * rotationDirections(rotationIndex, :)';
     end
     cameraTwist = [omega; velocity];
-    twists(:, k) = omhec.adjointSE3(TscEstimate) * cameraTwist;
-    poses(:, :, k + 1) = omhec.expSE3(twists(:, k)) * poses(:, :, k);
+    twists(:, k) = mhec.adjointSE3(TscEstimate) * cameraTwist;
+    poses(:, :, k + 1) = mhec.expSE3(twists(:, k)) * poses(:, :, k);
 end
 end
 
@@ -275,7 +161,7 @@ axis = randn(3, 1);
 axis = axis / norm(axis);
 direction = randn(3, 1);
 direction = direction / norm(direction);
-rotationPerturbation = omhec.expSE3([axis * deg2rad(rotationDeg); zeros(3, 1)]);
+rotationPerturbation = mhec.expSE3([axis * deg2rad(rotationDeg); zeros(3, 1)]);
 estimate = truth;
 estimate(1:3, 1:3) = rotationPerturbation(1:3, 1:3) * truth(1:3, 1:3);
 estimate(1:3, 4) = truth(1:3, 4) + direction * translationMagnitude;
@@ -297,7 +183,7 @@ rows = repmat(struct('Study', "", 'Level', NaN, 'Method', "", ...
     'RotationMeanDeg', NaN, 'RotationStdDeg', NaN, ...
     'TranslationMeanMm', NaN, 'TranslationStdMm', NaN), 0, 1);
 
-tail = cfg.numSteps + 1;
+tail = (cfg.numSteps + 2 - cfg.finalWindow):(cfg.numSteps + 1);
 for method = 1:3
     rotation = squeeze(mean(convergence.rotation(tail, :, method), 1));
     translation = squeeze(mean(convergence.translation(tail, :, method), 1));
@@ -321,13 +207,8 @@ for study = 1:numel(studyNames)
         end
     end
 end
-% All summary rows use the terminal-step error across trials.
-summary = struct2table(rows);
-summary.Statistic = repmat("terminal_step", height(summary), 1);
-summary.StepStart = repmat(cfg.numSteps, height(summary), 1);
-summary.StepEnd = repmat(cfg.numSteps, height(summary), 1);
-summary.StdDefinition = repmat("sample_std_across_trials", height(summary), 1);
-writetable(summary, fullfile(cfg.dataDir, 'simulation_summary.csv'));
+writetable(struct2table(rows), ...
+    fullfile(cfg.dataDir, 'simulation_summary.csv'));
 end
 
 function row = makeRow(study, level, method, rotation, translation)
@@ -339,3 +220,4 @@ row.RotationStdDeg = std(rotation, 0, 'omitnan');
 row.TranslationMeanMm = mean(translation, 'omitnan');
 row.TranslationStdMm = std(translation, 0, 'omitnan');
 end
+

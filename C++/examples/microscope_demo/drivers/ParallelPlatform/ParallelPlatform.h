@@ -117,7 +117,7 @@ private:
     int piPort_ = 50000;
     bool piUseTcp_ = false;
     bool piUseUsb_ = false;
-    // OnlineMHEC 的 Pivot 编译期开关：
+    // MHEC 的 Pivot 编译期开关：
     // true = preparePivotForMotion() 写入下方标定 Pivot；
     // false = preparePivotForMotion() 明确写入 0,0,0，避免沿用控制器残留 Pivot。
     // connect()/findReferance() 只建立连接和确认参考状态，不会直接写 Pivot。

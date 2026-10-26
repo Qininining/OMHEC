@@ -1,5 +1,5 @@
 #pragma once
-#include <omhec/math.hpp>
+#include <mhec/math.hpp>
 #include <vector>
 #include <random>
 

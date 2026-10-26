@@ -1,6 +1,6 @@
 // Extracted from the hardware implementation; numerical defaults are retained.
-#include <omhec/calibration.hpp>
-#include <omhec/math.hpp>
+#include <mhec/calibration.hpp>
+#include <mhec/math.hpp>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -124,7 +124,7 @@ void MHEC::updateIEKF(const MHEC::CalibrationCfg& cfg, CalibrationState& sta, co
         const cv::Vec3d& p1 = log.all.P_c_curr_list[i];
         const cv::Mat& xi = log.all.Twist_c_list[i];
         cv::Mat dT = cvMatFromEigen(MatrixExp6(VecTose3(eigenFromCvMat(xi))));
-        omhec::residual_model(p0, p1, xi, e, H);
+        mhec::residual_model(p0, p1, xi, e, H);
 
         if (cfg.iekf_propagate_point_covariance) {
 

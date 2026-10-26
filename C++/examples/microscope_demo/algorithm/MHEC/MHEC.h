@@ -3,7 +3,7 @@
 
 
 #include "qmath.h"
-#include <omhec/legacy.hpp>
+#include <mhec/legacy.hpp>
 #include <opencv2/opencv.hpp>
 
 namespace MHEC {

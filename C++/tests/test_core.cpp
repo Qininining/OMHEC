@@ -1,4 +1,4 @@
-#include <omhec/calibration.hpp>
+#include <mhec/calibration.hpp>
 #include "regression_scenario.hpp"
 #include <stdexcept>
 #include <iostream>
@@ -16,11 +16,11 @@ int main(int argc,char** argv) {
         // Public streaming adapters must preserve the extracted kernels.
         const auto data=generateDataset();
         for(int method=1;method<=2;++method) {
-            omhec::Config cfg;cfg.innovation_gate_enabled=false;
+            mhec::Config cfg;cfg.innovation_gate_enabled=false;
             cv::Mat p=cv::Mat::eye(6,6,CV_64F)*.01;
             cv::Mat q=cv::Mat::eye(6,6,CV_64F)*1e-8;
             cv::Mat noise=cv::Mat::eye(3,3,CV_64F)*1e-6;
-            auto stream=omhec::initialize(data.initial,p,q,noise,cfg);
+            auto stream=mhec::initialize(data.initial,p,q,noise,cfg);
             MHEC::CalibrationData log; MHEC::CalibrationState raw;
             raw.all.KF.P=p.clone(); raw.all.KF.Q=q.clone(); raw.all.KF.R=noise.clone();
             cv::Mat estimate=data.initial.clone();
@@ -30,10 +30,10 @@ int main(int argc,char** argv) {
                 log.all.P_c_prev_list.push_back(data.points[k]);
                 log.all.P_c_curr_list.push_back(data.points[k+1]);
                 if(method==1) {
-                    omhec::update_fgd(stream,xi,data.points[k],data.points[k+1],5.);
+                    mhec::update_fgd(stream,xi,data.points[k],data.points[k+1],5.);
                     if(k>=5) MHEC::updateServoOnce(cfg,raw,log,estimate,5.);
                 } else {
-                    omhec::update_iekf(stream,xi,data.points[k],data.points[k+1]);
+                    mhec::update_iekf(stream,xi,data.points[k],data.points[k+1]);
                     if(k>=5) MHEC::updateIEKF(cfg,raw,log,estimate);
                 }
                 require(cv::norm(stream.Tsc-estimate)<1e-12,"Streaming estimate changed");
@@ -44,12 +44,12 @@ int main(int argc,char** argv) {
         const auto T=MatrixExp6(VecTose3(x));
         require((T*TransInv(T)-Eigen::Matrix4d::Identity()).norm()<1e-12,"SE(3) inverse");
         const cv::Mat eye=cv::Mat::eye(6,6,CV_64F),zero=cv::Mat::zeros(6,6,CV_64F),r=cv::Mat::eye(3,3,CV_64F);
-        auto s=omhec::initialize(cvMatFromEigen(T),eye,zero,r);
+        auto s=mhec::initialize(cvMatFromEigen(T),eye,zero,r);
         const cv::Mat initial=s.Tsc.clone();
         const cv::Mat xi=(cv::Mat_<double>(6,1)<<.01,.02,.03,.1,.2,.3);
-        for(int k=0;k<5;++k) omhec::update_iekf(s,xi,{1,2,3},{1,2,3});
+        for(int k=0;k<5;++k) mhec::update_iekf(s,xi,{1,2,3},{1,2,3});
         require(!s.initialized && cv::norm(s.Tsc-initial)==0,"Initialization warmup");
-        cv::Mat e,H; omhec::residual_model({1,2,3},{1,2,3},xi,e,H);
+        cv::Mat e,H; mhec::residual_model({1,2,3},{1,2,3},xi,e,H);
         const Eigen::Vector3d point(1,2,3);
         const Eigen::VectorXd body=eigenFromCvMat(xi);
         const Eigen::Vector3d base=VecToso3(body.head<3>())*point+body.tail<3>();
@@ -63,7 +63,7 @@ int main(int argc,char** argv) {
         }
         require((eigenFromCvMat(H)-numeric).norm()<1e-6,"Residual Jacobian");
         bool rejected=false;
-        try {omhec::solve_position_only_ls(std::vector<cv::Mat>(6,cv::Mat::eye(4,4,CV_64F)),std::vector<cv::Vec3d>(6));}
+        try {mhec::solve_position_only_ls(std::vector<cv::Mat>(6,cv::Mat::eye(4,4,CV_64F)),std::vector<cv::Vec3d>(6));}
         catch(const std::invalid_argument&) {rejected=true;}
         require(rejected,"Degenerate PO-LS must be rejected");
         std::cout<<"PASS: frozen numerical baseline, SE(3), Jacobian, initialization and degeneracy\n";

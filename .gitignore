@@ -12,11 +12,11 @@ Thumbs.db
 build/
 build-*/
 cpp_build/
-/C++/examples/hardware/debug/
-/C++/examples/hardware/release/
-/C++/examples/hardware/data/
-/C++/examples/hardware/logs/
-/C++/examples/hardware/*.csv
+/C++/examples/microscope_demo/debug/
+/C++/examples/microscope_demo/release/
+/C++/examples/microscope_demo/data/
+/C++/examples/microscope_demo/logs/
+/C++/examples/microscope_demo/*.csv
 *.obj
 *.pdb
 *.ilk
@@ -25,8 +25,8 @@ cpp_build/
 *.log
 
 # Regenerable MATLAB results; raw Physical_Experiments/data stays tracked
-/reproduction/simulation/output/
-/reproduction/physical_experiments/output/
+/paper_experiments/simulation/output/
+/paper_experiments/physical_experiments/output/
 *.asv
 
 # LaTeX auxiliary files
