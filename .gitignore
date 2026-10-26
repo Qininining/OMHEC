@@ -12,11 +12,11 @@ Thumbs.db
 build/
 build-*/
 cpp_build/
-/C++/OnlineMHEC/debug/
-/C++/OnlineMHEC/release/
-/C++/OnlineMHEC/data/
-/C++/OnlineMHEC/logs/
-/C++/OnlineMHEC/*.csv
+/C++/examples/hardware/debug/
+/C++/examples/hardware/release/
+/C++/examples/hardware/data/
+/C++/examples/hardware/logs/
+/C++/examples/hardware/*.csv
 *.obj
 *.pdb
 *.ilk
@@ -25,8 +25,8 @@ cpp_build/
 *.log
 
 # Regenerable MATLAB results; raw Physical_Experiments/data stays tracked
-/MATLAB/Simulation/output/
-/MATLAB/Physical_Experiments/output/
+/reproduction/simulation/output/
+/reproduction/physical_experiments/output/
 *.asv
 
 # LaTeX auxiliary files
@@ -37,3 +37,6 @@ cpp_build/
 *.fls
 *.out
 *.synctex.gz
+
+# Optional local result exports
+/MATLAB/examples/output/

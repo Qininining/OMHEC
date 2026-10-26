@@ -1,55 +1,35 @@
-# Reproduction and build validation
+# Core extraction validation
 
-Validation date: 2026-10-22. Checks ran on Windows x64 using a separate copy
-outside the OMHEC working tree. Generated results and build products are not
-included in the release sources.
+Validation date: 2026-10-26. Sources were tested from a separate standalone copy outside the OMHEC working tree. No device was connected and no hardware application was launched.
 
-## MATLAB
+## Environments
 
-Environment: MATLAB R2025b Update 4 (25.2.0.3150157), with TeX Live 2025
-available for the Fig. 3 standalone PDF export.
+- Windows x64, MSVC 14.44.35207, Qt 6.2.3 for the optional hardware build.
+- CMake/NMake, Eigen 3.4.0, OpenCV 4.10.0 for the core and console example.
+- MATLAB R2025b Update 4; TeX Live 2025 only for the paper-reproduction appendix.
 
-- Reset MATLAB's search path before each workflow and checked that its entry
-  point resolved inside the independent copy.
-- Ran `run_simulation(true)`: all convergence and parameter-sweep error arrays
-  were finite, all four joint studies contained finite terminal errors, and
-  all four simulation PDFs were generated.
-- Ran `run_simulation(true, 'joint')` separately: the explicit joint-study
-  entry point completed and regenerated Fig. 3.
-- Ran `run_analysis` on both an independent baseline copy of the current
-  manuscript analysis and the reorganized package. All 11 generated CSV files
-  and the LaTeX table matched exactly, including all three magnifications.
-- Verified that simulation source files and the 159 physical input files
-  match their current manuscript counterparts byte for byte. The personal
-  `fig.m` plotting shortcut is excluded from the release.
+## Frozen numerical baselines
 
-The full 100-trial/100-step Monte Carlo run was not repeated during this
-directory refactor. Its configuration, seeds, and numerical implementation
-are unchanged; quick-mode results are for execution checks only. Earlier
-MATLAB releases were not tested.
+Before extracting algorithms, copies of the original MATLAB and C++ implementations were saved outside the project. The original MATLAB trial was instrumented to record estimates and covariances; its formulas were unchanged. The original C++ sources were compiled into a separate Qt-based baseline driver. Their outputs are retained in each language's tests/fixtures directory, with input/provenance notes.
 
-## C++
+- MATLAB tests compare all three transform/error trajectories on the original fixed-seed 35-step input. Recursive covariance traces match within 1e-8 absolute tolerance, excluding the deliberately undefined initial covariance history slot.
+- C++ tests compare all three 36-step transform/covariance traces within 1e-9 absolute tolerance. Public streaming adapters are also checked against the extracted numerical kernels at every step.
+- Both languages check SE(3) identities, the analytical instantaneous-motion Jacobian, initialization warmup and rank-deficient PO-LS inputs.
+- The C++ and MATLAB regression fixtures refer to their respective original implementations. They do not assert that the two languages have identical default covariance or gating conventions.
 
-Environment: Qt 6.2.3 MSVC x64 kit; Visual Studio 2022 x64 compiler
-(MSVC 14.44.35207); the bundled OpenCV/Eigen/device SDK files.
+## Core and example checks
 
-- Generated a shadow-build Makefile with qmake and built Release with nmake.
-- Successfully linked `OnlineMHEC.exe`.
-- Verified that post-link deployment copies `AgeCOM.dll` and
-  `PI_GCS2_DLL_x64.dll` beside the executable, with contents identical to
-  the supplied SDK files.
-- Checked that AgeMotion resolves its DLL from the executable directory,
-  without a personal absolute source path.
+- CMake core, test and console targets built without configuring Qt or hardware SDKs.
+- CTest passed. The console demonstration completed for all three methods.
+- Executable dependency inspection showed OpenCV and standard system/compiler runtimes, with no Qt dependency.
+- From a clean MATLAB path, test_core and demo_calibration ran using only the standalone MATLAB source/example directories. The two ordinary result plots were exported and inspected. No LaTeX or publication plotting code was used by the demo.
+- Static inspection found no GUI, random-data generation, plotting or file-output calls in the core directories.
 
-The application was not launched and no device was connected. Camera,
-autofocus, motion, hardware timing, vendor authorization, and installation of
-OpenCV/pylon runtime dependencies remain hardware/deployment checks. Existing
-unused-variable/unused-parameter compiler warnings are retained.
+## Optional workflows
 
-## Materials and licensing
+- The migrated qmake hardware project successfully compiled/linked against the shared C++ core sources. AgeCOM.dll and PI_GCS2_DLL_x64.dll were deployed beside OnlineMHEC.exe.
+- The independent paper simulation appendix completed run_simulation(true), including joint sensitivity and all four PDF outputs, using the shared MATLAB core.
+- Offline physical analysis completed for all 159 recorded input CSVs. All 11 output CSV statistics files and the LaTeX table matched a fresh execution of the pre-migration analysis exactly.
+- Original raw experiment data, manuscript PDF and setup image are preserved unchanged.
 
-The manuscript PDF and setup illustration are unchanged copies of the current
-manuscript materials. Third-party notices and Eigen license files are retained;
-the OpenCV 4.10.0 upstream license is included beside its SDK subset. The
-duplicated nested Eigen tree was removed from the release layout; the Eigen
-tree used by the qmake include path remains intact.
+The full 100-trial manuscript Monte Carlo run was not repeated for this refactor. Live hardware behavior and vendor runtime deployment remain untested. Compilation may retain pre-existing unused-variable/unused-parameter warnings in the hardware and compatibility code.
